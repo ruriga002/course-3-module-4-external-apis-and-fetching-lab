@@ -1,80 +1,33 @@
-// index.js
-const weatherApi = "https://api.weather.gov/alerts/active?area="
+const input = document.querySelector('#state-input')
+const button = document.querySelector('#fetch-alerts')
+const displayDiv = document.querySelector('#alerts-display')
+const errorDiv = document.querySelector('#error-message')
 
-async function fetchWeatherAlerts(stateAbbr) {
-  try {
-    const response = await fetch(
-      `https://api.weather.gov/alerts/active?area=${stateAbbr}`
-    );
+button.addEventListener('click', () => {
+  const state = input.value
 
-    if (!response.ok) {
-      throw new Error(`Request failed with status ${response.status}`);
-    }
+  fetch(`https://api.weather.gov/alerts/active?area=${state}`)
+    .then(res => res.json())
+    .then(data => {
+      const alerts = data.features
 
-    const data = await response.json();
-    console.log(data);
-    return data;
+      displayDiv.textContent = `Weather Alerts: ${alerts.length}`
 
-  } catch (error) {
-    console.log(error.message);
-    throw error;
-  }
-}
+      alerts.forEach(alert => {
+        const p = document.createElement('p')
+        p.textContent = alert.properties.headline
+        displayDiv.appendChild(p)
+      })
 
-function displayAlerts(data, stateAbbr) {
-  const resultsDiv = document.getElementById("results");
-  const alerts = data.features || [];
+      // clear error after success
+      errorDiv.classList.add('hidden')
+      errorDiv.textContent = ''
+    })
+    .catch((error) => {
+      errorDiv.classList.remove('hidden')
+      errorDiv.textContent = error.message
+    })
 
-  resultsDiv.innerHTML = `
-    <h2>Current watches, warnings, and advisories for ${stateAbbr.toUpperCase()}: ${alerts.length}</h2>
-    <ul>
-      ${alerts
-        .map(alert => `<li>${alert.properties.headline}</li>`)
-        .join("")}
-    </ul>
-  `;
-}
-
-function displayError(message) {
-  const errorDiv = document.getElementById("error-message");
-  errorDiv.textContent = message;
-  errorDiv.style.display = "block";
-}
-
-function clearUI() {
-  document.getElementById("results").innerHTML = "";
-
-  const errorDiv = document.getElementById("error-message");
-  errorDiv.textContent = "";
-  errorDiv.style.display = "none";
-}
-
-document.getElementById("getAlertsBtn").addEventListener("click", async () => {
-  const input = document.getElementById("stateInput");
-  const state = input.value.trim();
-
-  clearUI();
-
-  if (!state) {
-    displayError("Please enter a state abbreviation.");
-    input.value = "";
-    return;
-  }
-
-  try {
-    const data = await fetchWeatherAlerts(state);
-    const alerts = data.features || [];
-
-    if (alerts.length === 0) {
-      displayError("No alerts found for this state.");
-      return;
-    }
-
-    displayAlerts(data, state);
-
-  } catch (error) {
-    displayError(error.message || "Failed to fetch weather alerts.");
-  }
-
-  input.value = "";
-});
+  // clear input
+  input.value = ''
+})
